@@ -3,37 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Clicker WebApp</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Супер Кликер</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #1e1e2f, #111119);
-            color: white;
-            text-align: center;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        #score { font-size: 3em; margin: 10px 0; color: #ffeb3b; }
+        #clicker { width: 150px; height: 150px; border-radius: 50%; border: none; background: #4caf50; font-size: 2em; cursor: pointer; transition: 0.1s; }
+        #clicker:active { transform: scale(0.9); }
+        .shop-item { background: #333; padding: 15px; margin: 10px; border-radius: 10px; cursor: pointer; }
+        .shop-item:hover { background: #444; }
+    </style>
+</head>
+<body>
+
+    <h1>Супер Кликер</h1>
+    <div id="score">0</div>
+    <p>Доход в сек: <span id="cps">0</span></p>
+    
+    <button id="clicker">🦆</button>
+
+    <h2>Магазин</h2>
+    <div id="shop">
+        <div class="shop-item" onclick="buyUpgrade('clickPower')">
+            Улучшить клик (+1 сила) <br> Цена: <span id="cost-clickPower">10</span>
+        </div>
+        <div class="shop-item" onclick="buyUpgrade('autoClicker')">
+            Купить Автокликер (1/сек) <br> Цена: <span id="cost-autoClicker">50</span>
+        </div>
+    </div>
+
+    <script>
+        // Данные игры
+        let game = {
+            score: 0,
+            clickPower: 1,
+            autoClicker: 0,
+            costClickPower: 10,
+            costAutoClicker: 50
+        };
+
+        // Загрузка сохранений
+        const savedGame = JSON.parse(localStorage.getItem('clickerSave'));
+        if (savedGame) game = savedGame;
+
+        function updateUI() {
+            document.getElementById('score').innerText = Math.floor(game.score);
+            document.getElementById('cps').innerText = game.autoClicker;
+            document.getElementById('cost-clickPower').innerText = Math.floor(game.costClickPower);
+            document.getElementById('cost-autoClicker').innerText = Math.floor(game.costAutoClicker);
+            localStorage.setItem('clickerSave', JSON.stringify(game));
         }
-        .score-container {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 20px;
+
+        document.getElementById('clicker').onclick = () => {
+            game.score += game.clickPower;
+            updateUI();
+        };
+
+        function buyUpgrade(type) {
+            if (type === 'clickPower' && game.score >= game.costClickPower) {
+                game.score -= game.costClickPower;
+                game.clickPower += 1;
+                game.costClickPower *= 1.5;
+            } else if (type === 'autoClicker' && game.score >= game.costAutoClicker) {
+                game.score -= game.costAutoClicker;
+                game.autoClicker += 1;
+                game.costAutoClicker *= 1.5;
+            }
+            updateUI();
         }
-        .coin {
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, #f39c12, #d35400);
-            border-radius: 50%;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 80px;
+
+        // Автокликер (каждую секунду)
+        setInterval(() => {
+            game.score += game.autoClicker;
+            updateUI();
+        }, 1000);
+
+        updateUI();
+    </script>
+</body>
+</html>
             cursor: pointer;
             user-select: none;
             transition: transform 0.1s;
