@@ -2,38 +2,140 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Супер Кликер</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Turtle Clicker</title>
     <style>
-        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        #score { font-size: 3em; margin: 10px 0; color: #ffeb3b; }
-        #clicker { width: 150px; height: 150px; border-radius: 50%; border: none; background: #4caf50; font-size: 2em; cursor: pointer; transition: 0.1s; }
-        #clicker:active { transform: scale(0.9); }
-        .shop-item { background: #333; padding: 15px; margin: 10px; border-radius: 10px; cursor: pointer; }
-        .shop-item:hover { background: #444; }
+        /* НЕОНОВЫЕ ПЕРЕМЕННЫЕ */
+        :root {
+            --bg: #0a0a12;
+            --card: #161625;
+            --accent: #00f2ff; /* Неоновый голубой */
+            --text: #ffffff;
+        }
+        .theme-dark { --bg: #0a0a12; --card: #161625; --accent: #00f2ff; }
+        .theme-light { --bg: #f0f0f0; --card: #ffffff; --accent: #ff007f; --text: #000; }
+
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; transition: 0.3s; }
+        
+        /* СТАТИСТИКА */
+        .header { padding: 20px; text-align: center; }
+        .balance { font-size: 3em; font-weight: bold; color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+        .energy-bar { width: 80%; height: 20px; background: #333; margin: 10px auto; border-radius: 10px; overflow: hidden; border: 1px solid var(--accent); }
+        #energy-fill { height: 100%; background: var(--accent); width: 100%; transition: width 0.1s; }
+
+        /* ИГРОВАЯ ЗОНА */
+        .tap-area { flex: 1; display: flex; justify-content: center; align-items: center; }
+        #turtle { font-size: 8em; cursor: pointer; user-select: none; transition: 0.1s; }
+        #turtle:active { transform: scale(0.9); }
+
+        /* НАВИГАЦИЯ */
+        .nav { display: flex; background: var(--card); padding: 10px; border-top: 1px solid var(--accent); }
+        .nav button { flex: 1; padding: 10px; background: none; border: none; color: var(--text); font-weight: bold; }
+        
+        /* КОНТЕНТ */
+        .tab { display: none; padding: 20px; height: 300px; overflow-y: auto; }
+        .tab.active { display: block; }
+        .upgrade-card { background: var(--card); padding: 15px; margin-bottom: 10px; border-radius: 10px; border-left: 4px solid var(--accent); display: flex; justify-content: space-between; }
+        button.buy-btn { background: var(--accent); border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold; }
     </style>
 </head>
-<body>
+<body class="theme-dark">
 
-    <h1>Супер Кликер</h1>
-    <div id="score">0</div>
-    <p>Доход в сек: <span id="cps">0</span></p>
-    
-    <button id="clicker">🦆</button>
+    <div class="header">
+        <div class="balance" id="balance">0</div>
+        <div>🐢 Черепашья валюта</div>
+        <div class="energy-bar"><div id="energy-fill"></div></div>
+        <small id="energy-text">Энергия: 100/100</small>
+    </div>
 
-    <h2>Магазин</h2>
-    <div id="shop">
-        <div class="shop-item" onclick="buyUpgrade('clickPower')">
-            Улучшить клик (+1 сила) <br> Цена: <span id="cost-clickPower">10</span>
+    <!-- Вкладки -->
+    <div id="game" class="tab active tap-area">
+        <div id="turtle">🐢</div>
+    </div>
+
+    <div id="shop" class="tab">
+        <h3>Улучшения шахты</h3>
+        <div class="upgrade-card">
+            <div>Клик +1</div>
+            <button class="buy-btn" onclick="buy('click')">Цена: <span id="p-click">10</span></button>
         </div>
-        <div class="shop-item" onclick="buyUpgrade('autoClicker')">
-            Купить Автокликер (1/сек) <br> Цена: <span id="cost-autoClicker">50</span>
+        <div class="upgrade-card">
+            <div>Авто-ферма</div>
+            <button class="buy-btn" onclick="buy('auto')">Цена: <span id="p-auto">50</span></button>
         </div>
     </div>
 
+    <div id="settings" class="tab">
+        <h3>Темы</h3>
+        <button onclick="toggleTheme()">Сменить тему</button>
+        <h3>Скины</h3>
+        <button onclick="changeTurtle('🐢')">Черепаха</button>
+        <button onclick="changeTurtle('🌊')">Водная</button>
+        <button onclick="changeTurtle('💎')">Кристалл</button>
+    </div>
+
+    <div class="nav">
+        <button onclick="showTab('game')">Игра</button>
+        <button onclick="showTab('shop')">Магазин</button>
+        <button onclick="showTab('settings')">Настройки</button>
+    </div>
+
     <script>
-        // Данные игры
-        let game = {
+        // ДАННЫЕ ИГРЫ
+        let state = JSON.parse(localStorage.getItem('turtleSave')) || {
+            bal: 0, click: 1, auto: 0, energy: 100,
+            pClick: 10, pAuto: 50, skin: '🐢'
+        };
+
+        // ТАП
+        document.getElementById('turtle').onclick = () => {
+            if (state.energy > 0) {
+                state.bal += state.click;
+                state.energy -= 1;
+                render();
+            }
+        };
+
+        // ПОКУПКА
+        function buy(type) {
+            if (type === 'click' && state.bal >= state.pClick) {
+                state.bal -= state.pClick; state.click++; state.pClick = Math.floor(state.pClick * 1.5);
+            } else if (type === 'auto' && state.bal >= state.pAuto) {
+                state.bal -= state.pAuto; state.auto++; state.pAuto = Math.floor(state.pAuto * 1.5);
+            }
+            render();
+        }
+
+        // РЕНДЕР
+        function render() {
+            document.getElementById('balance').innerText = Math.floor(state.bal);
+            document.getElementById('energy-fill').style.width = state.energy + '%';
+            document.getElementById('energy-text').innerText = `Энергия: ${state.energy}/100`;
+            document.getElementById('turtle').innerText = state.skin;
+            document.getElementById('p-click').innerText = state.pClick;
+            document.getElementById('p-auto').innerText = state.pAuto;
+            localStorage.setItem('turtleSave', JSON.stringify(state));
+        }
+
+        // ЦИКЛЫ
+        setInterval(() => {
+            if (state.energy < 100) state.energy++; // Реген энергии
+            state.bal += state.auto; // Авто-доход
+            render();
+        }, 1000);
+
+        function showTab(t) {
+            document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+            document.getElementById(t).classList.add('active');
+        }
+
+        function toggleTheme() { document.body.classList.toggle('theme-light'); }
+        function changeTurtle(s) { state.skin = s; render(); }
+
+        render();
+    </script>
+</body>
+</html>
             score: 0,
             clickPower: 1,
             autoClicker: 0,
